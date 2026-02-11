@@ -7,7 +7,7 @@
   <meta name="description" content="AI-powered street food recipes from around the world. Transform any recipe, get authentic global flavors, and cook like a local. Free recipes in seconds.">
   <meta property="og:title" content="Bad Mutha Forker - Global Street Food AI">
   <meta property="og:description" content="Just got the most fire street taco recipe! Get authentic global street food recipes free.">
-  <meta property="og:image" content="https://fork.dubltap.io/og-image.png">
+  <meta property="og:image" content="https://fork.dubltap.io/og-image.png">h
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -904,7 +904,7 @@
           usageBadge.style.display = 'none';
           headerCTA.textContent = '⚡ Pro';
           headerCTA.className = 'btn btn-secondary';
-          headerCTA.onclick = null;
+          headerCTA.onclick = function() { showToast('⚡ You are a Pro member — unlimited recipes!'); };
         } else {
           usageBadge.style.display = 'block';
           document.getElementById('usageCount').textContent = Math.max(0, remaining);
