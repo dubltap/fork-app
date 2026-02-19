@@ -978,7 +978,7 @@
           
           // Format recipe response
           const content = formatRecipe(recipe);
-          addMessage('assistant', content, recipe.newName || '🍴 Your Recipe');
+          addMessage('assistant', content, (recipe.newName || '🍴 Your Recipe') + (state.isPro ? ' ✦ Pro' : ' · Free'));
           
           // Track usage
           if (!state.isPro) {
