@@ -627,6 +627,38 @@
       .logo-text { font-size: var(--text-base); }
       .trust-badges { gap: var(--space-xs); }
     }
+
+    /* ── RECIPE CARD (Shareable) ── */
+    .recipe-card-wrap {
+      margin: 12px 0; max-width: 400px;
+      }
+      .recipe-card-canvas {
+        width: 100%; border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          }
+          .share-bar {
+            display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+            }
+            .share-btn {
+              flex: 1; min-width: 80px; padding: 10px 14px; border: none; border-radius: 12px;
+                font-size: 13px; font-weight: 700; cursor: pointer;
+                  transition: all 0.2s; display: flex; align-items: center;
+                    justify-content: center; gap: 6px;
+                    }
+                    .share-btn-primary {
+                      background: #F4A261; color: #264653;
+                      }
+                      .share-btn-primary:hover { background: #E76F51; }
+                      .share-btn-secondary {
+                        background: rgba(255,255,255,0.08); color: #f0f0f0;
+                          border: 1px solid rgba(255,255,255,0.1);
+                          }
+                          .share-btn-secondary:hover { background: rgba(255,255,255,0.15); }
+                          .share-btn-download {
+                            background: rgba(42,157,143,0.2); color: #2A9D8F;
+                              border: 1px solid rgba(42,157,143,0.3);
+                              }
+                              .share-btn-download:hover { background: rgba(42,157,143,0.3); }
   </style>
 </head>
 <body>
@@ -978,9 +1010,23 @@
             recipe = { newName: '🍴 Recipe', description: data.result };
           }
           
-          // Format recipe response
-          const content = formatRecipe(recipe);
-          addMessage('assistant', content, (recipe.newName || '🍴 Your Recipe') + (state.isPro ? ' ✦ Pro' : ' · Free'));
+                // Format recipe response
+                      const content = formatRecipe(recipe);
+                            const msgTitle = (recipe.newName || '🍴 Your Recipe') + (state.isPro ? ' ✦ Pro' : ' · Free');
+                                  addMessage('assistant', content, msgTitle);
+
+                                        // Generate shareable recipe card
+                                              try {
+                                                      const cardCanvas = generateRecipeCard(recipe, msgTitle);
+                                                              const cardWrap = document.createElement('div');
+                                                                      cardWrap.className = 'recipe-card-wrap';
+                                                                              cardCanvas.className = 'recipe-card-canvas';
+                                                                                      cardWrap.appendChild(cardCanvas);
+                                                                                              cardWrap.appendChild(createShareBar(cardCanvas, recipe));
+                                                                                                      const messagesDiv = document.getElementById('messages');
+                                                                                                              messagesDiv.appendChild(cardWrap);
+                                                                                                                      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                                                                                                                            } catch(e) { console.error('Card generation error:', e); }
           
           // Track usage
           if (!state.isPro) {
@@ -995,6 +1041,17 @@
         // Fallback to sample recipe
         const sample = getSampleRecipe(text);
         addMessage('assistant', sample.content, sample.title);
+              try {
+                        const sampleRecipe = { newName: sample.title, description: sample.content.substring(0, 100), ingredients: [], instructions: [], tips: [] };
+                                const cardCanvas = generateRecipeCard(sampleRecipe, sample.title);
+                                        const cardWrap = document.createElement('div');
+                                                cardWrap.className = 'recipe-card-wrap';
+                                                        cardCanvas.className = 'recipe-card-canvas';
+                                                                cardWrap.appendChild(cardCanvas);
+                                                                        cardWrap.appendChild(createShareBar(cardCanvas, sampleRecipe));
+                                                                                document.getElementById('messages').appendChild(cardWrap);
+                                                                                      } catch(e) {}
+              }
         
         if (!state.isPro) {
           state.usageCount++;
@@ -1135,6 +1192,172 @@ Spice level: Your-lips-will-tingle-for-hours
       state.messages.push({ role, content, title });
     }
     
+    // ── SHAREABLE RECIPE CARD ──
+    function generateRecipeCard(recipe, title) {
+      const canvas = document.createElement('canvas');
+        canvas.width = 1080; canvas.height = 1350;
+          const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+              // Background gradient
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                  grad.addColorStop(0, '#264653'); grad.addColorStop(0.5, '#1a3341'); grad.addColorStop(1, '#0f2029');
+                    ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+
+                      // Subtle texture
+                        ctx.globalAlpha = 0.03;
+                          for (let i = 0; i < 3000; i++) {
+                              ctx.fillStyle = '#fff';
+                                  ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1);
+                                    }
+                                      ctx.globalAlpha = 1;
+
+                                        // Top accent bar
+                                          const accentGrad = ctx.createLinearGradient(0, 0, w, 0);
+                                            accentGrad.addColorStop(0, '#F4A261'); accentGrad.addColorStop(1, '#E76F51');
+                                              ctx.fillStyle = accentGrad;
+                                                ctx.fillRect(0, 0, w, 6);
+
+                                                  // Title
+                                                    ctx.fillStyle = '#F4A261';
+                                                      ctx.font = 'bold 52px "Outfit", sans-serif';
+                                                        ctx.textAlign = 'left';
+                                                          const cleanTitle = (recipe.newName || title || 'Recipe').replace(/[🍴✦·]|Pro|Free/g, '').trim();
+                                                            wrapCardText(ctx, cleanTitle, 60, 90, w - 120, 60);
+
+                                                              // Divider
+                                                                ctx.strokeStyle = '#F4A261'; ctx.globalAlpha = 0.3; ctx.lineWidth = 2;
+                                                                  ctx.beginPath(); ctx.moveTo(60, 180); ctx.lineTo(300, 180); ctx.stroke();
+                                                                    ctx.globalAlpha = 1;
+
+                                                                      // Description
+                                                                        if (recipe.description) {
+                                                                            ctx.fillStyle = '#A8DADC'; ctx.font = 'italic 28px "DM Sans", sans-serif';
+                                                                                wrapCardText(ctx, recipe.description.substring(0, 120), 60, 230, w - 120, 36);
+                                                                                  }
+
+                                                                                    // Ingredients
+                                                                                      let y = recipe.description ? 320 : 230;
+                                                                                        if (recipe.ingredients && recipe.ingredients.length) {
+                                                                                            ctx.fillStyle = '#F4A261'; ctx.font = 'bold 26px "Outfit", sans-serif';
+                                                                                                ctx.fillText('WHAT YOU NEED', 60, y); y += 45;
+                                                                                                    ctx.fillStyle = '#E0E0E0'; ctx.font = '26px "DM Sans", sans-serif';
+                                                                                                        recipe.ingredients.slice(0, 8).forEach(function(ing) {
+                                                                                                              var item = typeof ing === 'string' ? ing : (ing.amount + ' ' + ing.item);
+                                                                                                                    ctx.fillText('• ' + item.substring(0, 45), 80, y); y += 38;
+                                                                                                                        });
+                                                                                                                            if (recipe.ingredients.length > 8) {
+                                                                                                                                  ctx.fillStyle = '#A8DADC'; ctx.font = 'italic 24px "DM Sans", sans-serif';
+                                                                                                                                        ctx.fillText('+ ' + (recipe.ingredients.length - 8) + ' more...', 80, y); y += 38;
+                                                                                                                                            }
+                                                                                                                                                y += 20;
+                                                                                                                                                  }
+
+                                                                                                                                                    // Instructions (abbreviated)
+                                                                                                                                                      if (recipe.instructions && recipe.instructions.length) {
+                                                                                                                                                          ctx.fillStyle = '#F4A261'; ctx.font = 'bold 26px "Outfit", sans-serif';
+                                                                                                                                                              ctx.fillText('THE MOVE', 60, y); y += 45;
+                                                                                                                                                                  ctx.fillStyle = '#E0E0E0'; ctx.font = '26px "DM Sans", sans-serif';
+                                                                                                                                                                      recipe.instructions.slice(0, 5).forEach(function(step, i) {
+                                                                                                                                                                            var line = (i+1) + '. ' + step.substring(0, 50);
+                                                                                                                                                                                  ctx.fillText(line, 80, y); y += 38;
+                                                                                                                                                                                      });
+                                                                                                                                                                                          if (recipe.instructions.length > 5) {
+                                                                                                                                                                                                ctx.fillStyle = '#A8DADC'; ctx.font = 'italic 24px "DM Sans", sans-serif';
+                                                                                                                                                                                                      ctx.fillText('+ ' + (recipe.instructions.length - 5) + ' more steps...', 80, y);
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                            }
+
+                                                                                                                                                                                                              // Pro tip
+                                                                                                                                                                                                                if (recipe.tips && recipe.tips.length) {
+                                                                                                                                                                                                                    var tipY = h - 200;
+                                                                                                                                                                                                                        ctx.fillStyle = '#2A9D8F'; ctx.globalAlpha = 0.15;
+                                                                                                                                                                                                                            ctx.fillRect(40, tipY - 20, w - 80, 80); ctx.globalAlpha = 1;
+                                                                                                                                                                                                                                ctx.fillStyle = '#2A9D8F'; ctx.font = 'bold 24px "DM Sans", sans-serif';
+                                                                                                                                                                                                                                    ctx.fillText('💡 ' + recipe.tips[0].substring(0, 70), 60, tipY + 30);
+                                                                                                                                                                                                                                      }
+
+                                                                                                                                                                                                                                        // Branding bar at bottom
+                                                                                                                                                                                                                                          ctx.fillStyle = '#0a1a22'; ctx.fillRect(0, h - 90, w, 90);
+                                                                                                                                                                                                                                            var brandGrad = ctx.createLinearGradient(0, h - 90, w, h - 90);
+                                                                                                                                                                                                                                              brandGrad.addColorStop(0, '#F4A261'); brandGrad.addColorStop(1, '#E76F51');
+                                                                                                                                                                                                                                                ctx.fillStyle = brandGrad; ctx.fillRect(0, h - 90, w, 3);
+                                                                                                                                                                                                                                                  ctx.fillStyle = '#F4A261'; ctx.font = 'bold 30px "Outfit", sans-serif';
+                                                                                                                                                                                                                                                    ctx.textAlign = 'center';
+                                                                                                                                                                                                                                                      ctx.fillText('Bad Mutha Forker', w/2, h - 45);
+                                                                                                                                                                                                                                                        ctx.fillStyle = '#A8DADC'; ctx.font = '20px "DM Sans", sans-serif';
+                                                                                                                                                                                                                                                          ctx.fillText('fork.dubltap.io', w/2, h - 18);
+                                                                                                                                                                                                                                                            ctx.textAlign = 'left';
+
+                                                                                                                                                                                                                                                              return canvas;
+                                                                                                                                                                                                                                                              }
+
+                                                                                                                                                                                                                                                              function wrapCardText(ctx, text, x, y, maxW, lineH) {
+                                                                                                                                                                                                                                                                  var words = text.split(' '), line = '';
+                                                                                                                                                                                                                                                                    for (var i = 0; i < words.length; i++) {
+                                                                                                                                                                                                                                                                        var test = line + words[i] + ' ';
+                                                                                                                                                                                                                                                                            if (ctx.measureText(test).width > maxW && i > 0) {
+                                                                                                                                                                                                                                                                                  ctx.fillText(line.trim(), x, y); line = words[i] + ' '; y += lineH;
+                                                                                                                                                                                                                                                                                      } else { line = test; }
+                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                          ctx.fillText(line.trim(), x, y);
+                                                                                                                                                                                                                                                                                          }
+
+                                                                                                                                                                                                                                                                                          function createShareBar(canvas, recipe) {
+                                                                                                                                                                                                                                                                                              var wrap = document.createElement('div');
+                                                                                                                                                                                                                                                                                                wrap.className = 'share-bar';
+
+                                                                                                                                                                                                                                                                                                  // Primary share button (Web Share API on mobile)
+                                                                                                                                                                                                                                                                                                    var shareBtn = document.createElement('button');
+                                                                                                                                                                                                                                                                                                      shareBtn.className = 'share-btn share-btn-primary';
+                                                                                                                                                                                                                                                                                                        shareBtn.innerHTML = '📤 Share This Recipe';
+                                                                                                                                                                                                                                                                                                          shareBtn.onclick = function() {
+                                                                                                                                                                                                                                                                                                              canvas.toBlob(function(blob) {
+                                                                                                                                                                                                                                                                                                                    if (navigator.share && navigator.canShare) {
+                                                                                                                                                                                                                                                                                                                            var file = new File([blob], 'recipe.png', { type: 'image/png' });
+                                                                                                                                                                                                                                                                                                                                    navigator.share({
+                                                                                                                                                                                                                                                                                                                                              title: (recipe.newName || 'Recipe') + ' — Bad Mutha Forker',
+                                                                                                                                                                                                                                                                                                                                                        text: 'Check out this recipe I made with AI! 🍴 fork.dubltap.io',
+                                                                                                                                                                                                                                                                                                                                                                  files: [file]
+                                                                                                                                                                                                                                                                                                                                                                          }).catch(function() {});
+                                                                                                                                                                                                                                                                                                                                                                                } else {
+                                                                                                                                                                                                                                                                                                                                                                                        // Fallback: download
+                                                                                                                                                                                                                                                                                                                                                                                                var link = document.createElement('a');
+                                                                                                                                                                                                                                                                                                                                                                                                        link.download = 'bad-mutha-forker-recipe.png';
+                                                                                                                                                                                                                                                                                                                                                                                                                link.href = canvas.toDataURL('image/png');
+                                                                                                                                                                                                                                                                                                                                                                                                                        link.click();
+                                                                                                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                                                                                                                  }, 'image/png');
+                                                                                                                                                                                                                                                                                                                                                                                                                                    };
+                                                                                                                                                                                                                                                                                                                                                                                                                                      wrap.appendChild(shareBtn);
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // Download button
+                                                                                                                                                                                                                                                                                                                                                                                                                                          var dlBtn = document.createElement('button');
+                                                                                                                                                                                                                                                                                                                                                                                                                                            dlBtn.className = 'share-btn share-btn-download';
+                                                                                                                                                                                                                                                                                                                                                                                                                                              dlBtn.innerHTML = '⬇ Save';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                dlBtn.onclick = function() {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    var link = document.createElement('a');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        link.download = 'bad-mutha-forker-recipe.png';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            link.href = canvas.toDataURL('image/png');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                link.click();
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    wrap.appendChild(dlBtn);
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // Copy link button
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        var copyBtn = document.createElement('button');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          copyBtn.className = 'share-btn share-btn-secondary';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            copyBtn.innerHTML = '🔗 Link';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                              copyBtn.onclick = function() {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  navigator.clipboard.writeText('Check out Bad Mutha Forker — AI recipe transformer 🍴 fork.dubltap.io');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      copyBtn.innerHTML = '✓ Copied!';
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          setTimeout(function() { copyBtn.innerHTML = '🔗 Link'; }, 1500);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              wrap.appendChild(copyBtn);
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                return wrap;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                              }
     function formatContent(text) {
       return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -1170,6 +1393,7 @@ Spice level: Your-lips-will-tingle-for-hours
       
       closeModal('emailModal');
       showToast('Welcome! Start asking for recipes 🍴');
+          if (typeof rdt === 'function') { rdt('track', 'Lead'); rdt('track', 'SignUp'); }
       updateUI();
     }
     
